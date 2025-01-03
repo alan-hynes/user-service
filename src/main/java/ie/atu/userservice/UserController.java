@@ -1,33 +1,23 @@
 package ie.atu.userservice;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
+
     @Autowired
     private UserService userService;
 
     @PostMapping("/register")
-    public User registerUser(@RequestBody User user) {
-        return userService.registerUser(user);
+    public ResponseEntity<User> registerUser(@RequestBody User user) {
+        return ResponseEntity.status(201).body(userService.registerUser(user));
     }
 
-    @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
-        return userService.getUserById(id);
-    }
-
-    @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
-    }
-
-    @GetMapping("/username/{username}")
-    public User getUserByUsername(@PathVariable String username) {
-        return userService.getUserByUsername(username);
+    @GetMapping("/{email}")
+    public ResponseEntity<User> findUserByEmail(@PathVariable String email) {
+        return ResponseEntity.ok(userService.findUserByEmail(email));
     }
 }
