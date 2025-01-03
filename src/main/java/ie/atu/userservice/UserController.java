@@ -13,7 +13,7 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<User> registerUser(@RequestBody User user) {
-        return ResponseEntity.status(201).body(userService.registerUser(user));
+        return ResponseEntity.status(200).body(userService.registerUser(user));
     }
 
     @GetMapping("/{email}")
