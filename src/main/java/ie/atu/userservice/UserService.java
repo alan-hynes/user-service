@@ -1,15 +1,18 @@
 package ie.atu.userservice;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService {
-    private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
+    private final UserRepository userRepository;
+    private final RabbitTemplate rabbitTemplate;
+
+    public UserService(UserRepository userRepository, RabbitTemplate rabbitTemplate) {
         this.userRepository = userRepository;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public List<User> getAllUsers() {
@@ -41,11 +44,12 @@ public class UserService {
     }
 
     public User registerUser(User user) {
-        return userRepository.save(user);
-    }
-
-    public User findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        User registeredUser = userRepository.save(user);
+        rabbitTemplate.convertAndSend(
+                "service_exchange",
+                "user_routing_key",
+                "New user registered: " + user.getName()
+        );
+        return registeredUser;
     }
 }
