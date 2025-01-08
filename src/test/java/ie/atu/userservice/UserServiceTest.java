@@ -1,23 +1,19 @@
 package ie.atu.userservice;
 
-import ie.atu.userservice.User;
-import ie.atu.userservice.UserRepository;
-import ie.atu.userservice.UserService;
-import ie.atu.userservice.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-public class UserServiceTest {
+class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -26,61 +22,124 @@ public class UserServiceTest {
     private UserService userService;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    public void testRegisterUser() {
-        // Create a new user
-        User user = new User();
-        user.setName("testuser");
-        user.setPassword("password");
-        user.setEmail("testuser@example.com");
+    void getAllUsers() {
+        List<User> mockUsers = Arrays.asList(
+                new User(1L, "John Doe", "john.doe@example.com", "password123"),
+                new User(2L, "Jane Smith", "jane.smith@example.com", "password456")
+        );
 
-        // Mock the save method
-        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(userRepository.findAll()).thenReturn(mockUsers);
 
-        // Call the registerUser method
-        User registeredUser = userService.registerUser(user);
+        List<User> users = userService.getAllUsers();
 
-        // Verify the user was saved
-        assertThat(registeredUser).isNotNull();
-        assertThat(registeredUser.getName()).isEqualTo("testuser");
-        assertThat(registeredUser.getEmail()).isEqualTo("testuser@example.com");
+        assertEquals(2, users.size());
+        assertEquals("John Doe", users.get(0).getName());
+        assertEquals("Jane Smith", users.get(1).getName());
+        verify(userRepository, times(1)).findAll();
     }
 
     @Test
-    public void testFindUserByEmail() {
-        // Create a new user
-        User user = new User();
-        user.setName("testuser");
-        user.setPassword("password");
-        user.setEmail("testuser@example.com");
+    void createUser() {
+        User mockUser = new User(null, "John Doe", "john.doe@example.com", "password123");
+        User savedUser = new User(1L, "John Doe", "john.doe@example.com", "password123");
 
-        // Mock the findByEmail method
-        when(userRepository.findByEmail("testuser@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.save(mockUser)).thenReturn(savedUser);
 
-        // Call the findUserByEmail method
-        User foundUser = userService.findUserByEmail("testuser@example.com");
+        User user = userService.createUser(mockUser);
 
-        // Verify the user was found
-        assertThat(foundUser).isNotNull();
-        assertThat(foundUser.getName()).isEqualTo("testuser");
-        assertThat(foundUser.getEmail()).isEqualTo("testuser@example.com");
+        assertNotNull(user);
+        assertEquals(1L, user.getId());
+        assertEquals("John Doe", user.getName());
+        verify(userRepository, times(1)).save(mockUser);
     }
 
     @Test
-    public void testFindUserByEmailNotFound() {
-        // Mock the findByEmail method to return an empty Optional
-        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+    void getUserById() {
+        User mockUser = new User(1L, "John Doe", "john.doe@example.com", "password123");
 
-        // Call the findUserByEmail method and expect a ResourceNotFoundException
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+
+        User user = userService.getUserById(1L);
+
+        assertNotNull(user);
+        assertEquals(1L, user.getId());
+        assertEquals("John Doe", user.getName());
+        verify(userRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void getUserById_NotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
         Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
-            userService.findUserByEmail("nonexistent@example.com");
+            userService.getUserById(1L);
         });
 
-        // Verify the exception message
-        assertThat(exception.getMessage()).isEqualTo("User not found with email: nonexistent@example.com");
+        assertEquals("User not found with id: 1", exception.getMessage());
+        verify(userRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void updateUser() {
+        User existingUser = new User(1L, "John Doe", "john.doe@example.com", "password123");
+        User updatedDetails = new User(null, "John Updated", "john.updated@example.com", "newpassword123");
+        User updatedUser = new User(1L, "John Updated", "john.updated@example.com", "newpassword123");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser)).thenReturn(updatedUser);
+
+        User user = userService.updateUser(1L, updatedDetails);
+
+        assertNotNull(user);
+        assertEquals("John Updated", user.getName());
+        assertEquals("john.updated@example.com", user.getEmail());
+        verify(userRepository, times(1)).findById(1L);
+        verify(userRepository, times(1)).save(existingUser);
+    }
+
+    @Test
+    void updateUser_NotFound() {
+        User updatedDetails = new User(null, "John Updated", "john.updated@example.com", "newpassword123");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
+            userService.updateUser(1L, updatedDetails);
+        });
+
+        assertEquals("User not found with id: 1", exception.getMessage());
+        verify(userRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void deleteUser() {
+        User user = new User();
+        user.setId(1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        doNothing().when(userRepository).deleteById(1L);
+
+        userService.deleteUser(1L);
+
+        verify(userRepository).findById(1L);
+        verify(userRepository).deleteById(1L);
+    }
+
+
+    @Test
+    void deleteUser_NotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
+            userService.deleteUser(1L);
+        });
+
+        assertEquals("User not found with id: 1", exception.getMessage());
+        verify(userRepository, times(1)).findById(1L);
     }
 }
