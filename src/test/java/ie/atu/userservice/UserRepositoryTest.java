@@ -22,38 +22,32 @@ public class UserRepositoryTest {
 
     @Test
     public void testSaveAndFindByUsername() {
-        // Create a new user
+
         User user = new User();
         user.setName("testuser");
         user.setPassword("password");
         user.setEmail("test@email.com");
 
-        // Save the user
         userRepository.save(user);
 
-        // Find the user by username
         Optional<User> foundUser = userRepository.findByEmail("test@email.com");
 
-        // Verify the user was found
         assertThat(foundUser).isPresent();
         assertThat(foundUser.get().getEmail()).isEqualTo("test@email.com");
     }
 
     @Test
     public void NotUserFound() {
-        // Create a new user
+
         User user = new User();
         user.setName("testuser");
         user.setPassword("password");
         user.setEmail("test@email.com");
 
-        // Save the user
         userRepository.save(user);
 
-        // Find the user by username
         Optional<User> foundUser = userRepository.findByEmail("Alan");
 
-        // Verify the user was not found
         assertThat(foundUser).isNotPresent();
 
     }
